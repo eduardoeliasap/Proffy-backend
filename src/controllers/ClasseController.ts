@@ -1,5 +1,4 @@
-
-import { Request, Response } from 'express';
+import { Request, Response, response } from 'express';
 import db from '../database/connections';
 
 import convertHourToMinutes from  '../utils/convertHourToMinutes';
@@ -11,6 +10,40 @@ interface ScheduleItem {
 }
 
 export default class ClassController {
+  async index (req: Request, res: Response) {
+    const filters = req.query;
+
+    if (!filters.week_day || !filters.subject || !filters.time) {
+      return res.status(400).json({
+        error: 'Missing filters to search classes'
+      })
+    }    
+
+    const timeInMinutes = convertHourToMinutes(filters.time as string);
+
+    console.log(timeInMinutes);
+
+
+    /**
+     * PENDING: 
+     * The search does not return the times between from and to
+     */
+    const classes = await db('classes')
+      .whereExists(function() {
+        this.select('class_schedule.*')
+          .from('class_schedule')
+          .whereRaw('`class_schedule`.`class_id` = `classes`.`id`')
+          .whereRaw('`class_schedule`.`week_day` = ??', [Number(filters.week_day)])
+          .whereRaw('`class_schedule`.`from` <= ??', [timeInMinutes])          
+          .whereRaw('`class_schedule`.`to` > ??', [Number(timeInMinutes)])
+      })
+      .where('classes.subject', '=', filters.subject as string)
+      .join('users', 'classes.user_id', '=', 'users.id')
+      .select(['classes.*', 'users.*']);
+
+    return res.json(classes);
+  }
+
   async create (req: Request, res: Response) {
     const {
       name,
@@ -27,6 +60,10 @@ export default class ClassController {
     const trx = await db.transaction();
   
     try {
+      /**
+       * PENDENING
+       * Validate user exists
+       */
       const insertedUsersIds = await trx('users').insert({
         name,
         avatar,

@@ -55,8 +55,7 @@ export default class ClassController {
       schedule
     } = req.body;
     
-    // Transaction Variable
-    
+    // Transaction Variable    
     const trx = await db.transaction();
   
     try {
@@ -106,4 +105,11 @@ export default class ClassController {
       })
     }
   }
+
+  /**
+   * PENDENING
+   */
+  async update(req: Request, res: Response) {}
+
+  async delete(req: Request, res: Response) {}
 }
